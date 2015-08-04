@@ -1,0 +1,40 @@
+
+[input]
+  [input.syslogudp]
+  module = "udp_input"
+  uri = "0.0.0.0:5120"
+
+  [input.kafkainput]
+  module = "kafka_input"
+  uri = "192.168.1.1:2181,192.168.1.2:2181:::logs:::logstash" # "<ip:port>,<ip:port>:::<topic>:::<consumer_group>"
+        
+[processor]
+  [processor.syslogprocessor]
+  module = "syslog_processor"
+  worker = 7
+  rules = [
+          "haproxy~~~client_ip,frontend,backend,server_name,resp_code,req_header,req_method,url~~~.*\\s+(\\d+\\.\\d+\\.\\d+\\.\\d+):.*\\s+(.+)\\s+(.+)\\/(.+)\\s+[-\\+\\d]+\\/[-\\+\\d]+\\/[-\\+\\d]+\\/[-\\+\\d]+\\/[-\\+\\d]+\\s+(\\d+)\\s+[\\+-]?\\d+[\\s-]+.*({.*}).*{.*(GET|PUT|POST|HEAD)\\s+(\\S+)\\s*.*"
+          ]
+  [processor.jsonesprocessor]
+  module = "jsones_processor"
+  worker = 7
+  rules = [
+          "None"
+          ]
+
+[output]
+  [output.esoutput]
+  module = "elasticthrift_output"
+  uris = ["192.168.1.3:9500", "192.168.1.4:9500"]
+  flushinterval = 50  
+
+[route]
+  [route.syslog]
+    input = "syslogudp"
+    processor = "syslogprocessor"
+    output = "esoutput"
+    
+  [route.jsones]
+      input = "kafkainput"
+    processor = "jsonesprocessor"
+    output = "esoutput"
